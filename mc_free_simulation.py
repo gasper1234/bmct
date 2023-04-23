@@ -4,60 +4,58 @@ from bmct_fun import *
 # pri 20 ali vec se porazdelitev za monte carlo ne spreminja vec bistveno
 dim = 25
 # število celic
-N = 100000
+N = 1000000
 diff = 1/N
 # čas simulacije (število)
-t = 10**8
-t_s = np.zeros((t, dim))
+t = 4*10**8
+
+dim_s = np.arange(10, 30, 1)
+dim_res = np.zeros_like(dim_s, dtype=float)
 
 # zacetni pogoj (mreza sestkotnika)
 init_vec = np.zeros((dim))
 init_vec[3] = 1
 
-t_s[0] = init_vec
+for i in range(len(dim_s)):
+	dim = dim_s[i]
+	init_vec = np.zeros((dim))
+	init_vec[3] = 1
+	t_mc = walk_free(init_vec, t, diff)
+	x_s = np.arange(1, dim+1, 1)
+	y_s = np.log(t_mc)
+	m,b = np.polyfit(x_s, y_s, 1)
+	print(m)
+	dim_res[i] = m
+
+print(dim_res.tolist())
+
+plt.plot(dim_s, dim_res)
+plt.show()
 
 # izracun markovske verige
 start= time.time()
-t_s_prop = propag(np.copy(t_s), diff*4)
+t_prop = propag_free(init_vec, t, diff*4)
 print(time.time()-start)
 
 
 # izracun monte carlo
 start= time.time()
-t_s_mc = walk(t_s, diff)
+t_mc = walk_free(init_vec, t, diff)
 print(time.time()-start)
-
-
-t_s = np.linspace(0, t, t//100)
-# plot casovnega poteka
-plot_numbers = [0, 1, 2, 3, 4] # razvoj katerih N-kotnikov prikazemo
-cols = ['k', 'red', 'blue', 'orange', 'green', 'yellow']
-for i in range(len(plot_numbers)):
-	plt.plot(t_s, t_s_prop[:, plot_numbers[i]][::100], '--', color=cols[i], label=plot_numbers[i]+3)
-	plt.plot(t_s, t_s_mc[:, plot_numbers[i]][::100], color=cols[i], alpha=0.5)
-plt.xscale('log')
-plt.yscale('log')
-plt.ylim(0.01, 1.05)
-plt.ylabel(r'$p_i$')
-plt.xlabel('t')
-plt.xlim(10, t)
-plt.legend()
-plt.show()
-
 
 # izracun naklona koncne porazdelitve pri monte carlo, ta je kot kazejo rezultati eksponentna
 x_s = np.arange(1, dim+1, 1)
-y_s = np.log(t_s_mc[-1])
+y_s = np.log(t_mc)
 m,b = np.polyfit(x_s, y_s, 1)
 print('naklon', m, 'zacetna vrednost', b)
 
 # plot zacetne in koncne porazdelitve
 fig, ax = plt.subplots(2, sharex=True)
 x_s = np.arange(1, dim+1, 1)
-ax[0].bar(x_s, t_s_mc[-1],label='Monte Carlo stacionarno') # plot koncne porazdelitve
+ax[0].bar(x_s, t_mc,label='Monte Carlo stacionarno') # plot koncne porazdelitve
 ax[0].plot(x_s, np.exp(b)*np.exp(m*x_s), 'r--') # plot fita
 ax[0].legend()
-ax[1].bar(x_s, t_s_prop[-1], label='Markov chain stacinarno') # plot zacente
+ax[1].bar(x_s, t_prop, label='Markov chain stacinarno') # plot zacente
 ax[1].legend()
 ax[0].set_yscale('log')
 ax[0].set_ylabel(r'$p_i(t_\infty)$')
@@ -65,3 +63,5 @@ ax[1].set_ylabel(r'$p_i(t_\infty)$')
 ax[1].set_xticks(x_s)
 ax[1].set_xticklabels(x_s+3)
 plt.show()
+
+# todo nareid graf naklona v odvisnosti od dimnenzije

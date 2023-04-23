@@ -55,9 +55,16 @@ def walk(t_s, diff):
 		t_s[i] = step(t_s[i-1], diff)
 	return t_s
 
+@njit
+def walk_free(t_0, iter, diff):
+	t = np.copy(t_0)
+	for i in range(iter):
+		t = step(t, diff)
+	return t
 # markovske verige
 
 # matrika T
+@njit
 def make_T(dim, dt):
 	T_1 = np.diag(np.ones((dim))-dt)
 	T_2 = np.diag(np.ones((dim-1))*dt/2, 1) + np.diag(np.ones((dim-1))*dt/2, -1)
@@ -67,6 +74,7 @@ def make_T(dim, dt):
 	return T
 
 # casovni razvoj z matriko T
+@njit
 def propag(t_s, diff):
 	T = make_T(len(t_s[0]), diff)
 	check = len(t_s)//100
@@ -75,6 +83,17 @@ def propag(t_s, diff):
 		if i % check == 0:
 			print('norm', np.sum(t_s[i]))
 	return t_s
+
+@njit
+def propag_free(t_0, iter, diff):
+	T = make_T(len(t_0), diff)
+	check = iter//100
+	t = np.copy(t_0)
+	for i in range(iter):
+		t = T.dot(t)
+		if i % check == 0:
+			print('norm', np.sum(t))
+	return t
 
 # od tu naprej le se preizkusanje kako se obnasajo drugacne matrike T
 
@@ -136,3 +155,26 @@ def propag1(t_s, diff):
 		if i % check == 0:
 			print('norm', np.sum(t_s[i]))
 	return t_s
+
+def mass_center(m, lamb):
+	suma = 0
+	suma_b = 0
+	for i in range(1, m+1):
+		suma += i*np.exp(lamb*i)
+		suma_b += np.exp(lamb*i)
+	b = 1/suma_b
+	return suma*b
+
+def bisec_lamb(m):
+	min = -1
+	max = 0
+	mid = 0.5*(max+min)
+	guess = mass_center(m, mid)
+	while abs(guess-4) > 10**(-8):
+		if guess > 4:
+			max = mid
+		else:
+			min = mid
+		mid = 0.5*(min+max)
+		guess = mass_center(m, mid)
+	return mid
